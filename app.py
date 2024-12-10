@@ -11,7 +11,7 @@ load_dotenv()
 # uvicorn app:app --host 0.0.0.0 --port 10000
 app = FastAPI()
 
-openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 
 # Initialize Pinecone client
@@ -45,9 +45,8 @@ async def get_response(
 ):
     try:
         # Step 1: Convert query to embeddings
-        res = openai.Embedding.create(
-            input=query_data.query,
-            model="text-embedding-ada-002"
+        res = openai_client.embeddings.create(
+        input=[query_data.query], model="text-embedding-ada-002"
         )
         embedding = res["data"][0]["embedding"]
 
