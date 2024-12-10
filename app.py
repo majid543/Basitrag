@@ -43,28 +43,44 @@ async def get_response(
     query_data: QueryModel,
     credentials: HTTPAuthorizationCredentials = Depends(validate_token),
 ):
-    # Step 1: Convert query to embeddings
-    res = openai_client.embeddings.create(
-        input=[query_data.query], model="text-embedding-ada-002"
-    )
-    embedding = res.data[0].embedding
+    try:
+        # Step 1: Convert query to embeddings
+        res = openai.Embedding.create(
+            input=query_data.query,
+            model="text-embedding-ada-002"
+        )
+        embedding = res["data"][0]["embedding"]
 
-    # Step 2: Search for matching Vectors in Pinecone
-    results = index.query(vector=embedding, top_k=3, include_metadata=True).to_dict()
+        # Step 2: Search for matching vectors in Pinecone
+        results = index.query(vector=embedding, top_k=3, include_metadata=True)
 
-    # Step 3: Extract context from search results
-    context = [match["metadata"]["text"] for match in results["matches"]]
+        # Step 3: Extract context from search results
+        context = [match["metadata"].get("text", "") for match in results.get("matches", [])]
 
-    # Step 4: Combine context with the user's prompt
-    full_input = f"Context:\n{'\n'.join(context)}\n\nUser Prompt:\n{query_data.query}"
+        # Check if context is empty
+        if not context:
+            raise HTTPException(status_code=404, detail="No matching context found.")
 
-    # Step 5: Get GPT-4 response
-    gpt_response = openai_client.completions.create(
-        model="gpt-4",
-        prompt=full_input,
-        max_tokens=500,
-        temperature=0.7,
-    )
+        # Step 4: Combine context with the user's query
+        full_input = f"Context:\n{chr(10).join(context)}\n\nUser Query:\n{query_data.query}"
 
-    # Step 6: Return GPT-4 response
-    return {"response": gpt_response.choices[0].text.strip()}
+        # Step 5: Get GPT-4 response
+        gpt_response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": full_input}
+            ],
+            max_tokens=500,
+            temperature=0.7,
+        )
+
+        # Step 6: Extract response text
+        response_text = gpt_response["choices"][0]["message"]["content"].strip()
+
+        # Return the GPT-4 response
+        return {"response": response_text}
+
+    except Exception as e:
+        # Catch any unexpected errors
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
