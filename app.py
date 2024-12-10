@@ -36,7 +36,6 @@ def validate_token(
 
 class QueryModel(BaseModel):
     query: str  # User query to search the context
-    prompt: str  # User input prompt to pass to GPT-4
 
 
 @app.post("/")
@@ -57,7 +56,7 @@ async def get_response(
     context = [match["metadata"]["text"] for match in results["matches"]]
 
     # Step 4: Combine context with the user's prompt
-    full_input = f"Context:\n{'\n'.join(context)}\n\nUser Prompt:\n{query_data.prompt}"
+    full_input = f"Context:\n{'\n'.join(context)}\n\nUser Prompt:\n{query_data.query}"
 
     # Step 5: Get GPT-4 response
     gpt_response = openai_client.completions.create(
