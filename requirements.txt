@@ -1,5 +1,5 @@
 fastapi[all]
-openai
+openai==0.28
 pydantic
 python-dotenv
 pinecone-client
