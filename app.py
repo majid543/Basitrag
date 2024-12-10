@@ -11,7 +11,7 @@ load_dotenv()
 # uvicorn app:app --host 0.0.0.0 --port 10000
 app = FastAPI()
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 
 # Initialize Pinecone client
