@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Security, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from openai import OpenAI
+import openai
 from pinecone import Pinecone
 
 load_dotenv()
@@ -11,7 +11,7 @@ load_dotenv()
 # uvicorn app:app --host 0.0.0.0 --port 10000
 app = FastAPI()
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 
 # Initialize Pinecone client
