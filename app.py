@@ -53,6 +53,9 @@ async def get_response(
         # Step 2: Search for matching vectors in Pinecone
         results = index.query(vector=embedding, top_k=3, include_metadata=True)
 
+        matches = results.get("matches", [])
+        sources = list(set(match["metadata"].get("source", "") for match in matches if "source" in match["metadata"]))
+
         # Step 3: Extract context from search results
         context = [match["metadata"].get("text", "") for match in results.get("matches", [])]
 
@@ -78,7 +81,7 @@ async def get_response(
         response_text = gpt_response["choices"][0]["message"]["content"].strip()
 
         # Return the GPT-4 response
-        return {"response": response_text}
+        return {"response": response_text,"source": sources}
 
     except Exception as e:
         # Catch any unexpected errors
