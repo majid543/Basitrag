@@ -5,6 +5,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import openai
 from pinecone import Pinecone
+from fastapi import Header
+
+# Store user-specific conversations
+user_conversations = {}
 
 load_dotenv()
 
@@ -22,28 +26,43 @@ index = pc1.Index(index_name)
 # Middleware to secure HTTP endpoint
 security = HTTPBearer()
 
-
 def validate_token(
     http_auth_credentials: HTTPAuthorizationCredentials = Security(security),
+    x_user_token: str = Header(...),  # New header for the user token
 ):
+    # Step 1: Check if the authorization token is correct
     if http_auth_credentials.scheme.lower() == "bearer":
         token = http_auth_credentials.credentials
         if token != os.getenv("RENDER_API_TOKEN"):
-            raise HTTPException(status_code=403, detail="Invalid token")
+            raise HTTPException(status_code=403, detail="Invalid authorization token")
     else:
         raise HTTPException(status_code=403, detail="Invalid authentication scheme")
-
+    
+    # Step 2: Handle user-specific tokens
+    user_token = x_user_token  # User-specific token passed in the header
+    if user_token not in user_conversations:
+        user_conversations[user_token] = []  # Initialize conversation for the user if it doesn't exist
+    
+    return user_token
 
 class QueryModel(BaseModel):
     query: str  # User query to search the context
 
-
 @app.post("/")
 async def get_response(
     query_data: QueryModel,
-    credentials: HTTPAuthorizationCredentials = Depends(validate_token),
+    user_token: str = Depends(validate_token),  # Get the user token after validation
 ):
     try:
+        # Retrieve the last conversation for this user (if available)
+        if user_conversations[user_token]:
+            last_conversation = f"Last conversation: {user_conversations[user_token][-1]['response']}"
+        else:
+            last_conversation = "No previous conversation available."
+
+        # Combine the previous conversation with the new query
+        full_input = f"Previous conversation:\n{last_conversation}\n\nUser Query:\n{query_data.query}"
+
         # Step 1: Convert query to embeddings
         res = openai.Embedding.create(
             input=[query_data.query], model="text-embedding-ada-002"
@@ -64,7 +83,7 @@ async def get_response(
             raise HTTPException(status_code=404, detail="No matching context found.")
 
         # Step 4: Combine context with the user's query
-        full_input = f"Context:\n{chr(10).join(context)}\n\nUser Query:\n{query_data.query}"
+        full_input = f"Last conversation of the data: {last_conversation}\nThis is the Context for the query asked by user:\n{chr(10).join(context)}\n\nUser Query:\n{query_data.query}"
 
         # Step 5: Get GPT-4 response
         gpt_response = openai.ChatCompletion.create(
@@ -80,9 +99,16 @@ async def get_response(
         # Step 6: Extract response text
         response_text = gpt_response["choices"][0]["message"]["content"].strip()
 
+        # Store the new conversation for this user
+        user_conversations[user_token].append({
+            'query': query_data.query,
+            'response': response_text
+        })
+
         # Return the GPT-4 response
-        return {"response": response_text,"source": sources}
+        return {"response": response_text, "source": sources}
 
     except Exception as e:
         # Catch any unexpected errors
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
