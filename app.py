@@ -59,7 +59,7 @@ async def get_response(
             last_conversation = f"Last conversation: {user_conversations[user_token][-1]['response']}"
         else:
             last_conversation = "No previous conversation available."
-
+        print(last_conversation)
         # Combine the previous conversation with the new query
         full_input = f"Previous conversation:\n{last_conversation}\n\nUser Query:\n{query_data.query}"
 
