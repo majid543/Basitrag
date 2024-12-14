@@ -81,14 +81,17 @@ async def get_response(
         context = [match["metadata"].get("text", "") for match in results.get("matches", [])]
 
         # Combine last context with new search context
-        combined_context = f"{last_context}\n{chr(10).join(context)}".strip()
-
+        combined_context = (
+            f"This is the last conversation of the user for reference:\n{last_context}\n\n"
+            f"This is the context that was retrieved as per the new user query:\n{chr(10).join(context)}"
+        ).strip()
+        
         if not combined_context:
             raise HTTPException(status_code=404, detail="No matching context found.")
 
         # Step 5: Combine combined context with the user's query
         full_input = f"Context:\n{combined_context}\n\nUser Query:\n{query_data.query}"
-
+        print(full_input)
         # Step 6: Get GPT-4 response
         gpt_response = openai.ChatCompletion.create(
             model="gpt-4",
