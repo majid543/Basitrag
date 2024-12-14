@@ -55,8 +55,8 @@ async def get_response(
 ):
     try:
         # Retrieve the last conversation for this user (if available)
-        if user_conversations[user_token]:
-            last_conversation = f"Last conversation: {user_conversations[user_token][-1]['response']}"
+        if user_token in user_conversations and user_conversations[user_token]:
+            last_conversation = f"Last conversation: {user_conversations[user_token][0]['response']}"
         else:
             last_conversation = "No previous conversation available."
         print(last_conversation)
@@ -100,11 +100,10 @@ async def get_response(
         response_text = gpt_response["choices"][0]["message"]["content"].strip()
 
         # Store the new conversation for this user
-        user_conversations[user_token].append({
+        user_conversations[user_token] = [{
             'query': query_data.query,
             'response': response_text
-        })
-
+        }]
         # Return the GPT-4 response
         return {"response": response_text, "source": sources}
 
