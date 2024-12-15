@@ -83,7 +83,7 @@ async def get_response(
             raise HTTPException(status_code=404, detail="No matching context found.")
 
         # Step 4: Combine context with the user's query
-        full_input = f"Last conversation of the data: {last_conversation}\nThis is the Context for the query asked by user:\n{chr(10).join(context)}\n\nUser Query:\n{query_data.query}"
+        full_input = f"This is the last response from the GPT about our conversation you can have this to maintain a history of what is being asked previously: {last_conversation}\nThis is the Context for the query asked by user:\n{chr(10).join(context)}\n\nUser Query:\n{query_data.query}"
 
         # Step 5: Get GPT-4 response
         gpt_response = openai.ChatCompletion.create(
